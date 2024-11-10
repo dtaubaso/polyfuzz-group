@@ -1,13 +1,14 @@
 import streamlit as st
-import time
+import time, os
 import pandas as pd
 from polyfuzz import PolyFuzz
-from polyfuzz.models import Embeddings
-from flair.embeddings import WordEmbeddings
+#from polyfuzz.models import Embeddings
+#from flair.embeddings import WordEmbeddings
 import plotly.express as px
-fasttext = WordEmbeddings('es')
-fasttext_matcher = Embeddings(fasttext)
-model = PolyFuzz(fasttext_matcher)
+#os.environ["FLAIR_CACHE_ROOT"] = "modelos_flair" 
+#fasttext = WordEmbeddings('es')
+#fasttext_matcher = Embeddings(fasttext)
+model = PolyFuzz("TF-IDF")
 
 st.set_page_config(page_title="Agrupar Top Query", page_icon=":penguin:")
 
@@ -24,7 +25,8 @@ def get_top_query(df, col_queries, col_num, brand):
     df_first = model.get_matches()
     df_first = df_first[['From', 'Group']]
     df_first.columns = [col_queries, 'group']
-    model.match(df_first.group.unique().tolist())
+    df_first.dropna(inplace=True)
+    model.match(df_first['group'].unique().tolist())
     model.group()
     df_second = model.get_matches()
     df_second = df_second[['From', 'Group']]
