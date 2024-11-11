@@ -21,6 +21,7 @@ def get_top_query(df, col_queries, col_num, brand):
     pattern = '|'.join(rf'\b{palabra}\b' for palabra in brand)
     #df = df[~df[col_queries].isin(brand)]
     df = df[~df[col_queries].str.contains(pattern, case=False, na=False)]
+    df = df.groupby(col_queries).sum(numeric_only=True).reset_index()
     query = df[col_queries].tolist()
     model.match(query)
     model.group()
