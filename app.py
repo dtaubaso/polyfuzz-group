@@ -45,6 +45,7 @@ def get_top_query(df, col_queries, col_num, brand):
 
 if uploaded_file is not None:
     data = pd.read_csv(uploaded_file)
+    data = data.dropna()
     cols = data.columns.tolist()
     col_queries = st.radio("Elija la columna que tiene las queries",
                            cols, horizontal=True)
