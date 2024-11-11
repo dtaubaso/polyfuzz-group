@@ -25,12 +25,13 @@ def get_top_query(df, col_queries, col_num, brand):
     df_first = model.get_matches()
     df_first = df_first[['From', 'Group']]
     df_first.columns = [col_queries, 'group']
-    df_first.dropna(inplace=True)
+    df_first.fillna("n/a", inplace=True)
     model.match(df_first['group'].unique().tolist())
     model.group()
     df_second = model.get_matches()
     df_second = df_second[['From', 'Group']]
     df_second.columns = ['group', 'group_group']
+    df_second.fillna("n/a", inplace=True)
     df_merge = df.merge(df_first, on=col_queries, how='left')
     df_merge = df_merge.merge(df_second, on='group', how='left')
     df_merge.dropna(inplace=True)
