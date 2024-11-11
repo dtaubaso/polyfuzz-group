@@ -43,6 +43,33 @@ def get_top_query(df, col_queries, col_num, brand):
     df_merge.drop(['group', 'group_group'], axis=1, inplace=True)
     return df_merge
 
+def generate_treemap(df, col_num, col_queries):
+    # Calcular la suma de clics por grupo
+    group_clicks_sum = df.groupby('query_top')[col_num].sum().reset_index()
+
+    # Seleccionar los 10 grupos con la mayor suma de clics
+    top_10_groups = group_clicks_sum.nlargest(10, col_num)['query_top']
+
+    # Filtrar el DataFrame original para mantener solo los grupos seleccionados
+    df_filtered = df[df['query_top'].isin(top_10_groups)]
+
+    # Dentro de cada uno de estos 10 grupos, seleccionar las 10 consultas con más clics
+    df_filtered = df_filtered.sort_values(['query_top', col_num], ascending=[True, False]) \
+                         .groupby('query_top').head(10).reset_index(drop=True)
+
+    # Crear el treemap con los datos filtrados
+    fig = px.treemap(
+    df_filtered,
+    path=["query_top", col_queries],  # Define la jerarquía (nivel 1: grupo, nivel 2: consulta)
+    values=col_num,              # El tamaño de cada cuadro se basa en el valor de 'clicks'
+    title="Treemap de Top 10 Query tops y Top 10 Consultas"
+)
+
+# Configurar para que solo muestre el nivel de "grupo" inicialmente
+    fig.update_traces(maxdepth=1, root_color="lightgrey")
+    fig.update_coloraxes(showscale=False)  # Desactivar la escala de colores
+    return fig
+
 
 if uploaded_file is not None:
     data = pd.read_csv(uploaded_file)
@@ -58,10 +85,7 @@ if uploaded_file is not None:
     if st.button("Generar"):
         with st.spinner('Generando Gráfico...'):
             df_top_query = get_top_query(data, col_queries, col_num, brand)
-        # Crear el treemap
-        fig = px.treemap(df_top_query, path=['query_top'], values=col_num, 
-                        color=col_num, color_continuous_scale='blues')
-        fig.update_coloraxes(showscale=False)  # Desactivar la escala de colores
+        fig = generate_treemap(df_top_query, col_num, col_queries)
 
         # Mostrar el gráfico en Streamlit
         st.plotly_chart(fig)
