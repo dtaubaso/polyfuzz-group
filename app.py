@@ -5,6 +5,7 @@ from polyfuzz import PolyFuzz
 #from polyfuzz.models import Embeddings
 #from flair.embeddings import WordEmbeddings
 import plotly.express as px
+import plotly.graph_objects as go
 #os.environ["FLAIR_CACHE_ROOT"] = "modelos_flair" 
 #fasttext = WordEmbeddings('es')
 #fasttext_matcher = Embeddings(fasttext)
@@ -19,9 +20,9 @@ uploaded_file = st.file_uploader("Suba un archivo CSV", type=["csv"])
 
 def get_top_query(df, col_queries, col_num, brand):
     df = df.groupby(col_queries).sum(numeric_only=True).reset_index()
-    pattern = '|'.join(rf'\b{palabra}\b' for palabra in brand)
-    #df = df[~df[col_queries].isin(brand)]
-    df = df[~df[col_queries].str.contains(pattern, case=False, na=False)]
+    if brand:
+        pattern = '|'.join(rf'\b{palabra}\b' for palabra in brand)
+        df = df[~df[col_queries].str.contains(pattern, case=False, na=False)]
     query = df[col_queries].tolist()
     model.match(query)
     model.group()
@@ -57,17 +58,19 @@ def generate_treemap(df, col_num, col_queries):
     df_filtered = df_filtered.sort_values(['query_top', col_num], ascending=[True, False]) \
                          .groupby('query_top').head(10).reset_index(drop=True)
 
-    # Crear el treemap con los datos filtrados
     fig = px.treemap(
     df_filtered,
     path=["query_top", col_queries],  # Define la jerarquía (nivel 1: grupo, nivel 2: consulta)
     values=col_num,              # El tamaño de cada cuadro se basa en el valor de 'clicks'
-    title="Treemap de Top 10 Query tops y Top 10 Consultas"
+    title="Top 10 Query tops y Top 10 Consultas",
+    maxdepth=2,
+    color_continuous_scale='blues'
 )
+    
 
 # Configurar para que solo muestre el nivel de "grupo" inicialmente
-    fig.update_traces(maxdepth=1, root_color="lightgrey")
-    fig.update_coloraxes(showscale=False)  # Desactivar la escala de colores
+    #fig.update_traces(maxdepth=1, root_color="lightgrey")
+    #fig.update_coloraxes(showscale=False)  # Desactivar la escala de colores
     return fig
 
 
@@ -81,14 +84,16 @@ if uploaded_file is not None:
     col_num = st.radio("Elija la columna que tiene la métrica",
                            cols, horizontal=True)
     brand = st.text_input("Ingrese separados por comas los términos que no quiere analizar")
-    brand = list(map(str.strip, brand.split(',')))
+    if brand:
+        brand = list(map(str.strip, brand.split(',')))
     if st.button("Generar"):
         with st.spinner('Generando Gráfico...'):
             df_top_query = get_top_query(data, col_queries, col_num, brand)
         fig = generate_treemap(df_top_query, col_num, col_queries)
+        
 
         # Mostrar el gráfico en Streamlit
-        st.plotly_chart(fig)
+        st.plotly_chart(fig, use_container_width=True)
 
         # Convertir el DataFrame a CSV en bytes
         csv = df_top_query.to_csv(index=False).encode('utf-8')
