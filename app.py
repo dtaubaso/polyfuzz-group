@@ -1,5 +1,5 @@
 import streamlit as st
-import time, os
+import time, os, re
 import pandas as pd
 from polyfuzz import PolyFuzz
 #from polyfuzz.models import Embeddings
@@ -18,7 +18,9 @@ st.title('Agrupa querys con Polyfuzz')
 uploaded_file = st.file_uploader("Suba un archivo CSV", type=["csv"])
 
 def get_top_query(df, col_queries, col_num, brand):
-    df = df[~df[col_queries].isin(brand)]
+    pattern = '|'.join(rf'\b{palabra}\b' for palabra in brand)
+    #df = df[~df[col_queries].isin(brand)]
+    df = df[~df[col_queries].str.contains(pattern, case=False, na=False)]
     query = df[col_queries].tolist()
     model.match(query)
     model.group()
