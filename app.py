@@ -1,5 +1,5 @@
 import streamlit as st
-import time, os, re
+import time, os, re, psutil
 import pandas as pd
 from polyfuzz import PolyFuzz
 #from polyfuzz.models import Embeddings
@@ -9,23 +9,23 @@ import plotly.graph_objects as go
 #os.environ["FLAIR_CACHE_ROOT"] = "modelos_flair" 
 #fasttext = WordEmbeddings('es')
 #fasttext_matcher = Embeddings(fasttext)
-model = PolyFuzz("TF-IDF")
+model = PolyFuzz.load('rapidfuzz_matcher')
 
-st.set_page_config(page_title="Agrupar Top Query", page_icon=":penguin:")
-
-# Configuración de la app Streamlit
-st.title('Agrupa querys con Polyfuzz')
-# Cargador de archivos CSV
-uploaded_file = st.file_uploader("Suba un archivo CSV", type=["csv"])
+def get_memory_usage():
+    process = psutil.Process()
+    memory_info = process.memory_info()
+    return memory_info.rss / (1024 ** 2)  # Convert to MB
 
 def get_top_query(df, col_queries, col_num, brand):
-    df = df.groupby(col_queries).sum(numeric_only=True).reset_index()
     if brand:
         pattern = '|'.join(rf'\b{palabra}\b' for palabra in brand)
         df = df[~df[col_queries].str.contains(pattern, case=False, na=False)]
+    df = df[[col_queries, col_num]]
+    df = df.groupby(col_queries).sum(numeric_only=True).sort_values(col_num, ascending=False).reset_index().head(20000)
     query = df[col_queries].tolist()
     model.match(query)
-    model.group()
+    model.group(link_min_similarity=0.5)
+    print(f"Memory usage: {get_memory_usage()}")
     df_first = model.get_matches()
     df_first = df_first[['From', 'Group']]
     df_first.columns = [col_queries, 'group']
@@ -36,12 +36,19 @@ def get_top_query(df, col_queries, col_num, brand):
     df_second = df_second[['From', 'Group']]
     df_second.columns = ['group', 'group_group']
     df_second.fillna("n/a", inplace=True)
+    model.match(df_second['group_group'].unique().tolist())
+    model.group()
+    df_third = model.get_matches()
+    df_third = df_third[['From', 'Group']]
+    df_third.columns = ['group_group', 'group_group_group']
+    df_third.fillna("n/a", inplace=True)
     df_merge = df.merge(df_first, on=col_queries, how='left')
     df_merge = df_merge.merge(df_second, on='group', how='left')
+    df_merge = df_merge.merge(df_third, on='group_group', how='left')
     df_merge.dropna(inplace=True)
-    df_merge = df_merge.sort_values(['group_group', col_num], ascending=[True, False])
+    df_merge = df_merge.sort_values(['group_group_group', col_num], ascending=[True, False])
     df_merge['query_top'] = df_merge.groupby('group_group')[col_queries].transform('first')
-    df_merge.drop(['group', 'group_group'], axis=1, inplace=True)
+    df_merge.drop(['group', 'group_group', 'group_group_group'], axis=1, inplace=True)
     return df_merge
 
 def generate_treemap(df, col_num, col_queries):
@@ -72,7 +79,12 @@ def generate_treemap(df, col_num, col_queries):
     #fig.update_traces(maxdepth=1, root_color="lightgrey")
     #fig.update_coloraxes(showscale=False)  # Desactivar la escala de colores
     return fig
+st.set_page_config(page_title="Agrupar Top Query", page_icon=":penguin:")
 
+# Configuración de la app Streamlit
+st.title('Agrupa querys con Polyfuzz')
+# Cargador de archivos CSV
+uploaded_file = st.file_uploader("Suba un archivo CSV", type=["csv"])
 
 if uploaded_file is not None:
     data = pd.read_csv(uploaded_file)
@@ -89,6 +101,9 @@ if uploaded_file is not None:
     if st.button("Generar"):
         with st.spinner('Generando Gráfico...'):
             df_top_query = get_top_query(data, col_queries, col_num, brand)
+            
+        memory_usage = get_memory_usage()
+        st.write(memory_usage)
         fig = generate_treemap(df_top_query, col_num, col_queries)
         
 
