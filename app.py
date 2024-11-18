@@ -115,4 +115,5 @@ if uploaded_file is not None:
             file_name=f'top_query_agrupado_{int(time.time())}.csv',
             mime='text/csv'
         )
-        st.write(f"Duration: {time.time() - start_time} seconds")
+        duration = time.time() - start_time
+        st.write(f"Duration: {int(duration)} seconds")
