@@ -97,8 +97,7 @@ if uploaded_file is not None:
         with st.spinner('Generando Gráfico...'):
             df_top_query = get_top_query(data, col_queries, col_num, brand)
             
-        memory_usage = get_memory_usage()
-        st.write(memory_usage)
+
         fig = generate_treemap(df_top_query, col_num, col_queries)
         
 
