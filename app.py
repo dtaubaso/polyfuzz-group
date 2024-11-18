@@ -1,5 +1,5 @@
 import streamlit as st
-import time, os, re, psutil
+import time, re
 import pandas as pd
 from polyfuzz import PolyFuzz
 #from polyfuzz.models import Embeddings
@@ -11,10 +11,6 @@ import plotly.graph_objects as go
 #fasttext_matcher = Embeddings(fasttext)
 model = PolyFuzz.load('rapidfuzz_matcher')
 
-def get_memory_usage():
-    process = psutil.Process()
-    memory_info = process.memory_info()
-    return memory_info.rss / (1024 ** 2)  # Convert to MB
 
 def get_top_query(df, col_queries, col_num, brand):
     if brand:
@@ -25,7 +21,6 @@ def get_top_query(df, col_queries, col_num, brand):
     query = df[col_queries].tolist()
     model.match(query)
     model.group(link_min_similarity=0.5)
-    print(f"Memory usage: {get_memory_usage()}")
     df_first = model.get_matches()
     df_first = df_first[['From', 'Group']]
     df_first.columns = [col_queries, 'group']
