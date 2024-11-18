@@ -94,6 +94,7 @@ if uploaded_file is not None:
     if brand:
         brand = list(map(str.strip, brand.split(',')))
     if st.button("Generar"):
+        start_time = time.time()
         with st.spinner('Generando Gráfico...'):
             df_top_query = get_top_query(data, col_queries, col_num, brand)
             
@@ -114,3 +115,4 @@ if uploaded_file is not None:
             file_name=f'top_query_agrupado_{int(time.time())}.csv',
             mime='text/csv'
         )
+        st.write(f"Duration: {time.time() - start_time} seconds")
